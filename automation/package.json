@@ -1,0 +1,20 @@
+{
+  "name": "@ehr-sync/automation",
+  "version": "1.0.0",
+  "description": "EHR Sync Engine — Playwright UI automation fallback for legacy EHR portals",
+  "main": "dist/fillIntakeForm.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "fill-form": "ts-node src/fillIntakeForm.ts"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "^1.49.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

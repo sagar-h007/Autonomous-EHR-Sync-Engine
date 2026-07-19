@@ -1,0 +1,29 @@
+{
+  "name": "ehr-sync-engine",
+  "version": "1.0.0",
+  "description": "Autonomous EHR Sync Engine — FHIR R4 push with Playwright UI automation fallback",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "automation",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=backend && npm run build --workspace=automation && npm run build --workspace=frontend",
+    "db:migrate": "npm run prisma:migrate --workspace=backend",
+    "db:studio": "npm run prisma:studio --workspace=backend",
+    "install:playwright": "npx playwright install chromium"
+  },
+  "keywords": [
+    "ehr",
+    "fhir",
+    "hl7",
+    "healthcare",
+    "playwright",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedChart EHR System v4.2 — Patient Intake</title>
+  <style>
+    /* ── Reset ──────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design tokens — legacy EHR aesthetic (early-2000s institutional) ─ */
+    :root {
+      --brand-dark:    #003366;
+      --brand-mid:     #005599;
+      --brand-light:   #d6e8f7;
+      --brand-accent:  #006699;
+      --border:        #b0c4d8;
+      --bg-page:       #e8eef4;
+      --bg-form:       #f5f8fb;
+      --bg-header:     linear-gradient(180deg, #004080 0%, #002b5c 100%);
+      --text-dark:     #1a1a2e;
+      --text-mid:      #334155;
+      --text-muted:    #64748b;
+      --label-width:   160px;
+      --input-height:  32px;
+      --success-green: #15803d;
+      --success-bg:    #dcfce7;
+      --success-border:#86efac;
+      --error-red:     #b91c1c;
+      --required-star: #cc0000;
+    }
+
+    /* ── Page ─────────────────────────────────────────────────────────── */
+    body {
+      font-family: Verdana, Geneva, Tahoma, sans-serif;
+      font-size: 13px;
+      background-color: var(--bg-page);
+      color: var(--text-dark);
+      min-height: 100vh;
+    }
+
+    /* ── Top system bar ───────────────────────────────────────────────── */
+    .system-bar {
+      background: #001933;
+      color: #8ab4d4;
+      font-size: 11px;
+      padding: 4px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: 0.3px;
+    }
+    .system-bar .status { color: #4ade80; }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    header {
+      background: var(--bg-header);
+      color: white;
+      padding: 0;
+      border-bottom: 3px solid #f59e0b;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 24px;
+    }
+    .header-logo {
+      width: 52px;
+      height: 52px;
+      background: white;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+    .header-text h1 {
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+    .header-text .subtitle {
+      font-size: 12px;
+      color: #93c5fd;
+      margin-top: 2px;
+    }
+    .header-meta {
+      margin-left: auto;
+      text-align: right;
+      font-size: 11px;
+      color: #bfdbfe;
+      line-height: 1.6;
+    }
+    .header-meta .version { color: #f59e0b; font-weight: bold; }
+
+    /* ── Navigation tabs ──────────────────────────────────────────────── */
+    nav {
+      background: #0a4080;
+      display: flex;
+      gap: 1px;
+      padding: 0 24px;
+      border-bottom: 2px solid #f59e0b;
+    }
+    .nav-tab {
+      padding: 8px 18px;
+      font-size: 12px;
+      color: #93c5fd;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .nav-tab:hover { background: rgba(255,255,255,0.1); }
+    .nav-tab.active {
+      background: var(--bg-page);
+      color: var(--brand-dark);
+      font-weight: bold;
+      border-top: 2px solid #f59e0b;
+      margin-top: -2px;
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* ── Main layout ──────────────────────────────────────────────────── */
+    .page-layout {
+      display: flex;
+      gap: 0;
+      min-height: calc(100vh - 120px);
+    }
+
+    /* ── Sidebar ──────────────────────────────────────────────────────── */
+    aside {
+      width: 180px;
+      background: #dae4ef;
+      border-right: 1px solid var(--border);
+      padding: 12px 0;
+      flex-shrink: 0;
+    }
+    .sidebar-section {
+      font-size: 10px;
+      font-weight: bold;
+      color: var(--brand-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 8px 12px 4px;
+      border-bottom: 1px solid var(--border);
+      background: #ccd8e7;
+    }
+    .sidebar-link {
+      display: block;
+      padding: 7px 14px;
+      font-size: 12px;
+      color: var(--text-mid);
+      text-decoration: none;
+      border-bottom: 1px solid #c9d8e8;
+      cursor: pointer;
+    }
+    .sidebar-link:hover { background: #c5d5e8; }
+    .sidebar-link.active {
+      background: var(--brand-mid);
+      color: white;
+      border-left: 3px solid #f59e0b;
+      font-weight: bold;
+    }
+
+    /* ── Content area ─────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      padding: 20px 28px;
+      overflow-y: auto;
+    }
+
+    /* ── Breadcrumb ───────────────────────────────────────────────────── */
+    .breadcrumb {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .breadcrumb span { color: var(--brand-mid); cursor: pointer; }
+    .breadcrumb span:hover { text-decoration: underline; }
+
+    /* ── Form card ────────────────────────────────────────────────────── */
+    .form-card {
+      background: var(--bg-form);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--brand-mid);
+      border-radius: 2px;
+      max-width: 820px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .form-card-header {
+      background: var(--brand-light);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .form-card-header h2 {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--brand-dark);
+    }
+    .form-card-header .required-note {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .form-card-header .required-star { color: var(--required-star); }
+
+    /* ── Section within form ──────────────────────────────────────────── */
+    .form-section {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .form-section:last-of-type { border-bottom: none; }
+    .form-section-title {
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--brand-mid);
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    /* ── Form rows ────────────────────────────────────────────────────── */
+    .form-row {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      gap: 0;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+
+    label {
+      width: var(--label-width);
+      padding-top: 6px;
+      font-size: 12px;
+      color: var(--text-mid);
+      flex-shrink: 0;
+      font-weight: bold;
+    }
+    label .req { color: var(--required-star); margin-left: 2px; }
+
+    .input-wrap { flex: 1; }
+
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      height: var(--input-height);
+      padding: 4px 8px;
+      border: 1px solid #8ba5c0;
+      border-radius: 2px;
+      background: white;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text-dark);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--brand-mid);
+      box-shadow: 0 0 0 2px rgba(0,85,153,0.2);
+    }
+    textarea {
+      height: 90px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    select { cursor: pointer; }
+
+    /* ── ID fields display ────────────────────────────────────────────── */
+    .id-field {
+      display: inline-flex;
+      align-items: center;
+      height: var(--input-height);
+      padding: 4px 10px;
+      background: #e2eaf4;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--brand-dark);
+      letter-spacing: 1px;
+    }
+
+    /* ── Form actions ─────────────────────────────────────────────────── */
+    .form-actions {
+      background: #dae6f0;
+      border-top: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    #submit-btn {
+      padding: 8px 24px;
+      background: linear-gradient(180deg, #0066bb 0%, #004a8f 100%);
+      color: white;
+      border: 1px solid #003a70;
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.15s;
+    }
+    #submit-btn:hover { opacity: 0.88; }
+    #submit-btn:active { transform: translateY(1px); }
+
+    .btn-secondary {
+      padding: 7px 18px;
+      background: linear-gradient(180deg, #f0f4f8 0%, #dce6f0 100%);
+      color: var(--text-mid);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* ── Success banner ───────────────────────────────────────────────── */
+    #success-banner {
+      display: none;
+      margin-top: 16px;
+      border: 1px solid var(--success-border);
+      background: var(--success-bg);
+      border-radius: 3px;
+      padding: 14px 18px;
+      border-left: 4px solid var(--success-green);
+      max-width: 820px;
+    }
+    #success-banner .banner-header {
+      font-weight: bold;
+      color: var(--success-green);
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    #success-banner .banner-detail {
+      font-size: 12px;
+      color: #166534;
+      line-height: 1.6;
+    }
+    #success-banner .record-id {
+      font-family: 'Courier New', monospace;
+      background: #bbf7d0;
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-size: 11px;
+    }
+
+    /* ── Error banner ─────────────────────────────────────────────────── */
+    .error-banner {
+      display: none;
+      margin-top: 12px;
+      border-left: 4px solid var(--error-red);
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 3px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--error-red);
+      max-width: 820px;
+    }
+
+    /* ── Status bar ───────────────────────────────────────────────────── */
+    footer {
+      background: #c8d8e8;
+      border-top: 1px solid var(--border);
+      padding: 4px 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- System bar -->
+  <div class="system-bar">
+    <span>MedChart Enterprise EHR &nbsp;|&nbsp; Facility: <strong>St. Vincent General Hospital</strong> &nbsp;|&nbsp; Department: Admissions</span>
+    <span>Session: <span class="status">● ACTIVE</span> &nbsp;|&nbsp; User: <strong>NURSE_STATION_3</strong> &nbsp;|&nbsp; <span id="clock"></span></span>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="header-logo">🏥</div>
+      <div class="header-text">
+        <h1>MedChart EHR System</h1>
+        <div class="subtitle">Electronic Health Records &amp; Patient Management Platform</div>
+      </div>
+      <div class="header-meta">
+        <div class="version">Version 4.2.1 (Legacy)</div>
+        <div>Last Backup: <span id="backup-time"></span></div>
+        <div>Server: <strong>PROD-EHR-01</strong></div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-tab">Dashboard</button>
+      <button class="nav-tab active">Patient Intake</button>
+      <button class="nav-tab">Patient Search</button>
+      <button class="nav-tab">Appointments</button>
+      <button class="nav-tab">Reports</button>
+      <button class="nav-tab">Admin</button>
+    </nav>
+  </header>
+
+  <!-- Page layout -->
+  <div class="page-layout">
+
+    <!-- Sidebar -->
+    <aside>
+      <div class="sidebar-section">Intake Forms</div>
+      <a class="sidebar-link active">▶ New Intake</a>
+      <a class="sidebar-link">Pending Intakes</a>
+      <a class="sidebar-link">Today's Admissions</a>
+      <div class="sidebar-section">Quick Links</div>
+      <a class="sidebar-link">Patient Lookup</a>
+      <a class="sidebar-link">Insurance Verify</a>
+      <a class="sidebar-link">Lab Orders</a>
+      <a class="sidebar-link">Medication List</a>
+      <div class="sidebar-section">Help</div>
+      <a class="sidebar-link">User Manual</a>
+      <a class="sidebar-link">IT Support</a>
+    </aside>
+
+    <!-- Main content -->
+    <main>
+      <!-- Breadcrumb -->
+      <div class="breadcrumb">
+        <span>Home</span> ▸ <span>Patient Intake</span> ▸ New Patient Registration
+      </div>
+
+      <!-- The intake form -->
+      <form id="intake-form" novalidate>
+
+        <div class="form-card">
+          <div class="form-card-header">
+            <h2>📋 New Patient Intake — Registration Form</h2>
+            <span class="required-note">Fields marked <span class="required-star">*</span> are required</span>
+          </div>
+
+          <!-- Section: System -->
+          <div class="form-section">
+            <div class="form-section-title">System Information</div>
+            <div class="form-row">
+              <label>Record Type</label>
+              <div class="input-wrap"><span class="id-field">NEW_PATIENT_REG</span></div>
+            </div>
+            <div class="form-row">
+              <label>Tracking ID</label>
+              <div class="input-wrap"><span class="id-field" id="tracking-id"></span></div>
+            </div>
+            <div class="form-row">
+              <label>Entry Date</label>
+              <div class="input-wrap"><span class="id-field" id="entry-date"></span></div>
+            </div>
+          </div>
+
+          <!-- Section: Patient Demographics -->
+          <div class="form-section">
+            <div class="form-section-title">Patient Demographics</div>
+
+            <div class="form-row">
+              <label for="firstName">First Name <span class="req">*</span></label>
+              <div class="input-wrap">
+                <input type="text" id="firstName" name="firstName"
+                       placeholder="Enter patient first name"
+                       autocomplete="off" maxlength="100" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="lastName">Last Name <span class="req">*</span></label>
+              <div class="input-wrap">
+                <input type="text" id="lastName" name="lastName"
+                       placeholder="Enter patient last name"
+                       autocomplete="off" maxlength="100" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="dob">Date of Birth <span class="req">*</span></label>
+              <div class="input-wrap">
+                <input type="date" id="dob" name="dob" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="gender">Gender <span class="req">*</span></label>
+              <div class="input-wrap">
+                <select id="gender" name="gender">
+                  <option value="">— Select —</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                  <option value="unknown">Unknown / Not Disclosed</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Clinical Information -->
+          <div class="form-section">
+            <div class="form-section-title">Clinical Information</div>
+
+            <div class="form-row">
+              <label for="reason">Chief Complaint / Reason for Visit <span class="req">*</span></label>
+              <div class="input-wrap">
+                <textarea id="reason" name="reason"
+                          placeholder="Describe the patient's primary reason for this visit, current symptoms, and relevant history…"
+                          maxlength="1000"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form actions -->
+          <div class="form-actions">
+            <button type="submit" id="submit-btn">💾 Save &amp; Register Patient</button>
+            <button type="button" class="btn-secondary" onclick="resetForm()">↺ Clear Form</button>
+            <button type="button" class="btn-secondary">⊞ Save as Draft</button>
+          </div>
+        </div><!-- /.form-card -->
+
+      </form>
+
+      <!-- Success banner — shown after successful submission -->
+      <div id="success-banner" role="alert">
+        <div class="banner-header">✅ Patient Successfully Registered</div>
+        <div class="banner-detail">
+          Patient record has been created and saved to the MedChart EHR system.<br/>
+          Record ID: <span class="record-id" id="result-record-id"></span> &nbsp;|&nbsp;
+          Submitted by: <strong>NURSE_STATION_3</strong> &nbsp;|&nbsp;
+          Timestamp: <span id="result-timestamp"></span>
+        </div>
+      </div>
+
+      <!-- Error banner (shown on client-side validation failure) -->
+      <div class="error-banner" id="error-banner" role="alert">
+        <strong>⚠ Validation Error:</strong> <span id="error-message"></span>
+      </div>
+
+    </main>
+  </div><!-- /.page-layout -->
+
+  <!-- Footer status bar -->
+  <footer>
+    <span>Connected to: <strong>PROD-DB-01</strong></span>
+    <span>Response Time: <strong>48ms</strong></span>
+    <span>© 2009–2024 MedChart Systems Inc. All rights reserved.</span>
+    <span style="margin-left:auto;">Build: 4.2.1-20240315</span>
+  </footer>
+
+  <script>
+    // ── Clock ────────────────────────────────────────────────────────────────
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString();
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ── Dynamic fields ────────────────────────────────────────────────────────
+    document.getElementById('backup-time').textContent =
+      new Date(Date.now() - 3600000).toLocaleTimeString();
+
+    document.getElementById('entry-date').textContent =
+      new Date().toLocaleDateString('en-US', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+      });
+
+    document.getElementById('tracking-id').textContent =
+      'TRK-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    // ── Form submission ───────────────────────────────────────────────────────
+    document.getElementById('intake-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const errorBanner  = document.getElementById('error-banner');
+      const errorMessage = document.getElementById('error-message');
+      const successBanner = document.getElementById('success-banner');
+
+      // Hide any existing banners
+      errorBanner.style.display  = 'none';
+      successBanner.style.display = 'none';
+
+      // Client-side validation
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName  = document.getElementById('lastName').value.trim();
+      const dob       = document.getElementById('dob').value;
+      const gender    = document.getElementById('gender').value;
+      const reason    = document.getElementById('reason').value.trim();
+
+      if (!firstName) { showError('First Name is required.'); return; }
+      if (!lastName)  { showError('Last Name is required.');  return; }
+      if (!dob)       { showError('Date of Birth is required.'); return; }
+      if (!gender)    { showError('Gender selection is required.'); return; }
+      if (!reason)    { showError('Chief Complaint / Reason is required.'); return; }
+
+      // Simulate brief save delay (legacy system "processing")
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Saving to MedChart…';
+
+      setTimeout(function () {
+        // Generate a record ID
+        const recordId = 'MRN-' + Date.now().toString().slice(-8);
+        document.getElementById('result-record-id').textContent = recordId;
+        document.getElementById('result-timestamp').textContent =
+          new Date().toLocaleString();
+
+        // Show success
+        successBanner.style.display = 'block';
+        successBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.textContent = '💾 Save & Register Patient';
+      }, 800);
+    });
+
+    function showError(msg) {
+      document.getElementById('error-message').textContent = msg;
+      document.getElementById('error-banner').style.display = 'block';
+    }
+
+    function resetForm() {
+      document.getElementById('intake-form').reset();
+      document.getElementById('error-banner').style.display  = 'none';
+      document.getElementById('success-banner').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

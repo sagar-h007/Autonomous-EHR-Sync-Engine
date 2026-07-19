@@ -1,0 +1,65 @@
+// =============================================================================
+// schema.prisma — EHR Sync Engine Database Schema
+// =============================================================================
+// Design decisions:
+//   • UUID primary keys — collision-safe, no sequential guessability risk
+//   • IntakeLog stores the full patientData as JSON so we have an immutable
+//     audit trail of exactly what was extracted, even as PatientData evolves
+//   • fhirId is nullable — only set when the FHIR API path succeeds
+//   • status enum keeps the 3 terminal states explicit and queryable
+//   • errorDetail captures the failure reason for operational debugging
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Set DATABASE_URL in backend/.env
+  // Format: postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// IntakeStatus — the three terminal outcomes of a sync attempt
+// ---------------------------------------------------------------------------
+enum IntakeStatus {
+  SUCCESS_API       // Patient data pushed to FHIR R4 server successfully
+  SUCCESS_FALLBACK  // FHIR failed; Playwright UI automation saved the day
+  FAILED            // Both FHIR and UI automation failed — manual review needed
+}
+
+// ---------------------------------------------------------------------------
+// IntakeLog — immutable audit log for every process-intake call
+//
+// Rows are append-only by design: we never UPDATE a log record after creation.
+// This gives a full audit trail suitable for HIPAA-adjacent compliance.
+// ---------------------------------------------------------------------------
+model IntakeLog {
+  id          String       @id @default(uuid())
+
+  // The raw unstructured text that was submitted by the caller
+  rawText     String       @db.Text @map("raw_text")
+
+  // Structured patient data extracted by the mock LLM service.
+  // Stored as JSON so schema evolution doesn't require DB migrations.
+  patientData Json?        @map("patient_data")
+
+  // FHIR resource ID returned by the HAPI server (only on SUCCESS_API)
+  fhirId      String?      @map("fhir_id")
+
+  // Terminal sync status
+  status      IntakeStatus
+
+  // Human-readable error description (null on success)
+  errorDetail String?      @db.Text @map("error_detail")
+
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  // Index for operational dashboards: "show me all failed intakes today"
+  @@index([status, createdAt])
+
+  @@map("intake_logs")
+}
