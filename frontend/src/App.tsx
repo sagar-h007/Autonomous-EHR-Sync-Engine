@@ -21,7 +21,8 @@ export default function App() {
   // Health-check the API on mount and every 30s
   const checkHealth = useCallback(async () => {
     try {
-      const res = await fetch('/health');
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/health`);
       setApiOnline(res.ok);
     } catch {
       setApiOnline(false);

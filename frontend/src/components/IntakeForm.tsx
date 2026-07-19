@@ -38,7 +38,8 @@ export default function IntakeForm({ onResult, onPipeline, onLoading, onRefreshL
     onPipeline({ ...IDLE_PIPELINE, llm: 'success', fhir: 'active' });
 
     try {
-      const url = `/api/process-intake${simulateFailure ? '?simulateFhirFailure=true' : ''}`;
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const url = `${baseUrl}/api/process-intake${simulateFailure ? '?simulateFhirFailure=true' : ''}`;
       const res = await fetch(url, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },

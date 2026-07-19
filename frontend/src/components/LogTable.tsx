@@ -15,7 +15,8 @@ export default function LogTable({ refreshTrigger }: LogTableProps) {
   const fetchLogs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res  = await fetch('/api/intake-logs?limit=25');
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/intake-logs?limit=25`);
       const json = await res.json() as ApiResponse<LogsResult>;
       if (json.success && json.data) {
         const incoming = json.data.logs;
